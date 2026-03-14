@@ -50,7 +50,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                   key={col.label}
                   className={[
                     "px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide",
-                    col.right ? "text-right" : "text-left",
+                    "right" in col && col.right ? "text-right" : "text-left",
                   ].join(" ")}
                 >
                   {col.label}
