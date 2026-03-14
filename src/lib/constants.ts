@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 /** Display currency for formatting amounts */
-export const CURRENCY = "BDT" as const;
+export const CURRENCY = "PKR" as const;
 
 /** App name shown in the UI */
 export const APP_NAME = "SplitEase" as const;

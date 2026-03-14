@@ -7,8 +7,8 @@
  * @example  formatCurrency(1250)       → "৳1,250.00"
  * @example  formatCurrency(1250, "USD") → "$1,250.00"
  */
-export function formatCurrency(amount: number, currency = "BDT"): string {
-  return new Intl.NumberFormat("en-BD", {
+export function formatCurrency(amount: number, currency = "PKR"): string {
+  return new Intl.NumberFormat("en-PK", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

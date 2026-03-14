@@ -145,7 +145,7 @@ export default function SettlementForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-            Amount (৳) <span className="text-red-500">*</span>
+            Amount (₨) <span className="text-red-500">*</span>
           </label>
           <input
             id="amount"

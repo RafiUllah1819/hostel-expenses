@@ -203,7 +203,7 @@ export default function ExpenseForm({
             htmlFor="amount"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Amount (৳) <span className="text-red-500">*</span>
+            Amount (₨) <span className="text-red-500">*</span>
           </label>
           <input
             id="amount"
