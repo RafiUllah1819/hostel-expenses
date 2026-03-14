@@ -44,7 +44,7 @@ export default function BalanceTable({ balances }: BalanceTableProps) {
                   className={[
                     "px-4 py-3 text-xs font-semibold text-gray-500",
                     "uppercase tracking-wide",
-                    col.right ? "text-right" : "text-left",
+                    "right" in col && col.right ? "text-right" : "text-left",
                   ].join(" ")}
                 >
                   {col.label}

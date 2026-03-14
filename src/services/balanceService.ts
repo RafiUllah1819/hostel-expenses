@@ -20,12 +20,12 @@ export async function fetchMemberBalances(): Promise<MemberBalance[]> {
     await Promise.all([
       supabase
         .from(TABLES.MEMBERS)
-        .select("id, group_id, name, nickname, email, created_at")
+        .select("id, name, nickname, email, created_at")
         .order("created_at", { ascending: true }),
 
       supabase
         .from(TABLES.EXPENSES)
-        .select("id, group_id, title, amount, paid_by, date, note, created_at"),
+        .select("id, title, amount, paid_by, date, note, created_at"),
 
       supabase
         .from(TABLES.EXPENSE_PARTICIPANTS)
@@ -33,7 +33,7 @@ export async function fetchMemberBalances(): Promise<MemberBalance[]> {
 
       supabase
         .from(TABLES.SETTLEMENTS)
-        .select("id, group_id, paid_by, paid_to, amount, date, note, created_at"),
+        .select("id, paid_by, paid_to, amount, date, note, created_at"),
     ]);
 
   // ── Surface any error from any of the four requests ──────────────────────
