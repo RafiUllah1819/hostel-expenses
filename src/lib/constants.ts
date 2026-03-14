@@ -15,6 +15,7 @@ export const TABLES = {
   EXPENSES: "expenses",
   EXPENSE_PARTICIPANTS: "expense_participants",
   SETTLEMENTS: "settlements",
+  COVER_BILLS: "cover_bills",
 } as const;
 
 /** Supabase view names */

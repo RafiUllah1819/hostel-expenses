@@ -26,6 +26,7 @@
 -- (RLS is OFF by default — you must turn it on per table)
 
 alter table groups               enable row level security;
+alter table cover_bills          enable row level security;
 alter table members              enable row level security;
 alter table expenses             enable row level security;
 alter table expense_participants enable row level security;
@@ -92,6 +93,20 @@ create policy "anon can update expense_participants"
 
 create policy "anon can delete expense_participants"
   on expense_participants for delete to anon using (true);
+
+
+-- ── cover_bills ──────────────────────────────────────────────────────────────
+create policy "anon can read cover_bills"
+  on cover_bills for select to anon using (true);
+
+create policy "anon can insert cover_bills"
+  on cover_bills for insert to anon with check (true);
+
+create policy "anon can update cover_bills"
+  on cover_bills for update to anon using (true);
+
+create policy "anon can delete cover_bills"
+  on cover_bills for delete to anon using (true);
 
 
 -- ── settlements ───────────────────────────────────────────────────────────────

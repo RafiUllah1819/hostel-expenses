@@ -62,7 +62,7 @@
  */
 
 import { roundMoney, computeShareAmount } from "@/utils/splitExpense";
-import type { Member, Expense, ExpenseParticipant, Settlement, MemberBalance } from "@/types";
+import type { Member, Expense, ExpenseParticipant, Settlement, CoverBill, MemberBalance } from "@/types";
 
 // Re-export so callers that already import these from calculations.ts continue
 // to work without changes (expenseService.ts imports computeShareAmount here).
@@ -150,37 +150,78 @@ export function getTotalSettlementsReceived(
   return roundMoney(total);
 }
 
+/**
+ * Credit this member gave away via cover bills (no cash — balance transfer).
+ * Decreases the helper's balance (their credit is consumed).
+ *
+ * @example
+ *   getTotalCoverBillsGiven("Aizaz", [{ helper_id:"Aizaz", amount:500 }])
+ *   → 500
+ */
+export function getTotalCoverBillsGiven(
+  memberId: string,
+  coverBills: CoverBill[]
+): number {
+  const total = coverBills
+    .filter((cb) => cb.helper_id === memberId)
+    .reduce((sum, cb) => sum + cb.amount, 0);
+
+  return roundMoney(total);
+}
+
+/**
+ * Credit this member received from others via cover bills (no cash — balance transfer).
+ * Increases the beneficiary's balance (their debt is reduced).
+ *
+ * @example
+ *   getTotalCoverBillsReceived("KhanG", [{ beneficiary_id:"KhanG", amount:500 }])
+ *   → 500
+ */
+export function getTotalCoverBillsReceived(
+  memberId: string,
+  coverBills: CoverBill[]
+): number {
+  const total = coverBills
+    .filter((cb) => cb.beneficiary_id === memberId)
+    .reduce((sum, cb) => sum + cb.amount, 0);
+
+  return roundMoney(total);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main calculation
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Calculate the running balance for every member, including settlements.
+ * Calculate the running balance for every member.
  *
- *   balance = (total_paid + total_settlements_made)
- *           - (total_owed + total_settlements_received)
+ *   balance = (total_paid + total_settlements_made    + total_cover_bills_received)
+ *           - (total_owed + total_settlements_received + total_cover_bills_given)
  *
+ * All three transaction types are zero-sum — the sum of all member balances = 0.
  * Result is sorted highest-first so creditors appear at the top of any list.
- * Members with zero activity are included with all-zero values.
- * Sum of all balances is always 0 (money is conserved across the group).
  *
- * @param settlements - pass [] if no settlements exist yet (backwards-compatible)
+ * @param settlements  - pass [] if none exist (backwards-compatible)
+ * @param coverBills   - pass [] if none exist (backwards-compatible)
  */
 export function calculateMemberBalances(
   members: Member[],
   expenses: Expense[],
   participants: ExpenseParticipant[],
-  settlements: Settlement[] = []
+  settlements: Settlement[] = [],
+  coverBills: CoverBill[]   = []
 ): MemberBalance[] {
   const balances: MemberBalance[] = members.map((member) => {
-    const total_paid                 = getTotalPaidByMember(member.id, expenses);
-    const total_owed                 = getTotalOwedByMember(member.id, participants);
-    const total_settlements_made     = getTotalSettlementsMade(member.id, settlements);
-    const total_settlements_received = getTotalSettlementsReceived(member.id, settlements);
+    const total_paid                   = getTotalPaidByMember(member.id, expenses);
+    const total_owed                   = getTotalOwedByMember(member.id, participants);
+    const total_settlements_made       = getTotalSettlementsMade(member.id, settlements);
+    const total_settlements_received   = getTotalSettlementsReceived(member.id, settlements);
+    const total_cover_bills_given      = getTotalCoverBillsGiven(member.id, coverBills);
+    const total_cover_bills_received   = getTotalCoverBillsReceived(member.id, coverBills);
 
     const balance = roundMoney(
-      (total_paid + total_settlements_made) -
-      (total_owed  + total_settlements_received)
+      (total_paid + total_settlements_made    + total_cover_bills_received) -
+      (total_owed + total_settlements_received + total_cover_bills_given)
     );
 
     return {
@@ -189,6 +230,8 @@ export function calculateMemberBalances(
       total_owed,
       total_settlements_made,
       total_settlements_received,
+      total_cover_bills_given,
+      total_cover_bills_received,
       balance,
     };
   });

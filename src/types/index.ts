@@ -49,6 +49,32 @@ export interface Settlement {
   created_at: string;        // ISO 8601 timestamptz
 }
 
+/**
+ * Row in the `cover_bills` table.
+ *
+ * A "cover bill" is a balance transfer — NOT a cash payment.
+ * The helper (positive balance) absorbs part of the beneficiary's (negative balance) debt
+ * by transferring their own credit. No money physically moves.
+ *
+ * Effect on balances:
+ *   helper.balance      -= amount   (credit consumed)
+ *   beneficiary.balance += amount   (debt reduced)
+ *
+ * Contrast with Settlement (cash physically moves from debtor to creditor):
+ *   Settlement:  Khan G hands ₨500 cash to Aizaz
+ *   Cover bill:  Aizaz transfers ₨500 of his credit to Khan G (no cash)
+ */
+export interface CoverBill {
+  id: string;                // uuid
+  group_id: string | null;   // FK → groups.id  (nullable during v1→v2 migration)
+  helper_id: string;         // FK → members.id — the positive-balance member covering the debt
+  beneficiary_id: string;    // FK → members.id — the negative-balance member receiving help
+  amount: number;            // always positive
+  date: string;              // ISO date string "YYYY-MM-DD"
+  note: string | null;       // optional description, e.g. "covering March electricity for Khan G"
+  created_at: string;        // ISO 8601 timestamptz
+}
+
 /** Row in the `expense_participants` table */
 export interface ExpenseParticipant {
   id: string;           // uuid
@@ -105,13 +131,28 @@ export interface ExpenseListItem extends Expense {
  *
  * Settlements are zero-sum: sum of all balances across all members = 0 always.
  */
+/**
+ * Per-member balance summary — computed, never stored.
+ *
+ * Formula:
+ *   balance = (total_paid + total_settlements_made    + total_cover_bills_received)
+ *           - (total_owed + total_settlements_received + total_cover_bills_given)
+ *
+ *   balance > 0  → others owe this member  (creditor)
+ *   balance < 0  → this member owes others (debtor)
+ *   balance = 0  → fully settled
+ *
+ * All three transaction types are zero-sum: sum of all balances = 0 always.
+ */
 export interface MemberBalance {
   member: Member;
-  total_paid: number;                 // SUM of expenses paid by this member
-  total_owed: number;                 // SUM of expense shares owed by this member
-  total_settlements_made: number;     // SUM of cash this member paid to others
-  total_settlements_received: number; // SUM of cash others paid to this member
-  balance: number;                    // (total_paid + settlements_made) - (total_owed + settlements_received)
+  total_paid: number;                   // SUM of expenses paid by this member
+  total_owed: number;                   // SUM of expense shares owed by this member
+  total_settlements_made: number;       // SUM of cash this member paid to others
+  total_settlements_received: number;   // SUM of cash others paid to this member
+  total_cover_bills_given: number;      // SUM of credit this member transferred to others (no cash)
+  total_cover_bills_received: number;   // SUM of credit others transferred to this member (no cash)
+  balance: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,4 +193,13 @@ export interface NewSettlementInput {
   date: string;      // "YYYY-MM-DD"
   note?: string;
   group_id?: string; // required in v2 multi-group mode
+}
+
+export interface NewCoverBillInput {
+  helper_id: string;      // member id — positive-balance member giving their credit
+  beneficiary_id: string; // member id — negative-balance member receiving debt relief
+  amount: number;
+  date: string;           // "YYYY-MM-DD"
+  note?: string;
+  group_id?: string;      // required in v2 multi-group mode
 }

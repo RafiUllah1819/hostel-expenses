@@ -129,6 +129,40 @@ export type Database = {
         };
       };
 
+      // ── cover_bills ───────────────────────────────────────────────────────
+      cover_bills: {
+        Row: {
+          id: string;
+          group_id: string | null;
+          helper_id: string;
+          beneficiary_id: string;
+          amount: number;
+          date: string;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id?: string | null;
+          helper_id: string;
+          beneficiary_id: string;
+          amount: number;
+          date: string;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_id?: string | null;
+          helper_id?: string;
+          beneficiary_id?: string;
+          amount?: number;
+          date?: string;
+          note?: string | null;
+          created_at?: string;
+        };
+      };
+
       // ── expense_participants ───────────────────────────────────────────────
       expense_participants: {
         Row: {
@@ -166,6 +200,8 @@ export type Database = {
           total_owed: number;
           total_settlements_made: number;
           total_settlements_received: number;
+          total_cover_bills_given: number;
+          total_cover_bills_received: number;
           balance: number;
         };
       };

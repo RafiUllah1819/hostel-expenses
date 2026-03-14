@@ -169,6 +169,48 @@ create index if not exists idx_settlements_date    on settlements (date desc);
 
 
 -- =============================================================================
+-- TABLE: cover_bills
+-- A balance transfer where a positive-balance member absorbs part of a
+-- negative-balance member's debt. No cash changes hands.
+--
+-- This is DIFFERENT from a settlement:
+--   Settlement  = debtor hands physical cash to creditor
+--   Cover bill  = creditor transfers their credit balance to the debtor
+--
+-- Effect:
+--   helper balance      -= amount   (credit consumed)
+--   beneficiary balance += amount   (debt reduced)
+-- =============================================================================
+create table if not exists cover_bills (
+  id             uuid           primary key default gen_random_uuid(),
+  group_id       uuid           references groups (id)
+                                  on update cascade
+                                  on delete restrict,
+  helper_id      uuid           not null references members (id)
+                                  on update cascade
+                                  on delete restrict,
+  beneficiary_id uuid           not null references members (id)
+                                  on update cascade
+                                  on delete restrict,
+  amount         numeric(10, 2) not null check (amount > 0),
+  date           date           not null default current_date,
+  note           text           check (note is null or char_length(note) <= 300),
+  created_at     timestamptz    not null default now(),
+
+  constraint cover_bills_no_self_cover check (helper_id <> beneficiary_id)
+);
+
+comment on table  cover_bills                is 'Balance transfers: helper absorbs beneficiary debt using positive balance. No cash moves.';
+comment on column cover_bills.helper_id      is 'Member with positive balance who is covering the debt.';
+comment on column cover_bills.beneficiary_id is 'Member with negative balance whose debt is being reduced.';
+comment on column cover_bills.amount         is 'Amount of balance transferred, always positive.';
+
+create index if not exists idx_cover_bills_helper_id      on cover_bills (helper_id);
+create index if not exists idx_cover_bills_beneficiary_id on cover_bills (beneficiary_id);
+create index if not exists idx_cover_bills_date           on cover_bills (date desc);
+
+
+-- =============================================================================
 -- VIEW: member_balances
 -- Convenience view for per-member balance within their group context.
 -- balance > 0  → others owe this member
@@ -180,30 +222,35 @@ create index if not exists idx_settlements_date    on settlements (date desc);
 -- =============================================================================
 create or replace view member_balances as
 select
-  m.id                                                                      as member_id,
-  m.name                                                                    as member_name,
+  m.id                                                                          as member_id,
+  m.name                                                                        as member_name,
   m.email,
   m.group_id,
-  coalesce(sum(e.amount)      filter (where e.paid_by   = m.id), 0)        as total_paid,
-  coalesce(sum(ep.share_amount), 0)                                         as total_owed,
-  coalesce(sum(s_out.amount)  filter (where s_out.paid_by = m.id), 0)      as total_settlements_made,
-  coalesce(sum(s_in.amount)   filter (where s_in.paid_to  = m.id), 0)      as total_settlements_received,
-  -- balance = (paid_expenses + cash_paid_out) - (owed_expenses + cash_received)
+  coalesce(sum(e.amount)        filter (where e.paid_by           = m.id), 0)  as total_paid,
+  coalesce(sum(ep.share_amount), 0)                                             as total_owed,
+  coalesce(sum(s_out.amount)    filter (where s_out.paid_by       = m.id), 0)  as total_settlements_made,
+  coalesce(sum(s_in.amount)     filter (where s_in.paid_to        = m.id), 0)  as total_settlements_received,
+  coalesce(sum(cb_out.amount)   filter (where cb_out.helper_id    = m.id), 0)  as total_cover_bills_given,
+  coalesce(sum(cb_in.amount)    filter (where cb_in.beneficiary_id = m.id), 0) as total_cover_bills_received,
   (
-    coalesce(sum(e.amount)     filter (where e.paid_by   = m.id), 0)
-    + coalesce(sum(s_out.amount) filter (where s_out.paid_by = m.id), 0)
+    coalesce(sum(e.amount)       filter (where e.paid_by            = m.id), 0)
+    + coalesce(sum(s_out.amount) filter (where s_out.paid_by        = m.id), 0)
+    + coalesce(sum(cb_in.amount) filter (where cb_in.beneficiary_id = m.id), 0)
   ) - (
     coalesce(sum(ep.share_amount), 0)
-    + coalesce(sum(s_in.amount)  filter (where s_in.paid_to  = m.id), 0)
-  )                                                                         as balance
+    + coalesce(sum(s_in.amount)   filter (where s_in.paid_to        = m.id), 0)
+    + coalesce(sum(cb_out.amount) filter (where cb_out.helper_id    = m.id), 0)
+  )                                                                             as balance
 from
   members m
-  left join expenses             e     on e.paid_by    = m.id
-  left join expense_participants ep    on ep.member_id  = m.id
-  left join settlements          s_out on s_out.paid_by = m.id
-  left join settlements          s_in  on s_in.paid_to  = m.id
+  left join expenses             e      on e.paid_by            = m.id
+  left join expense_participants ep     on ep.member_id          = m.id
+  left join settlements          s_out  on s_out.paid_by         = m.id
+  left join settlements          s_in   on s_in.paid_to          = m.id
+  left join cover_bills          cb_out on cb_out.helper_id      = m.id
+  left join cover_bills          cb_in  on cb_in.beneficiary_id  = m.id
 group by
   m.id, m.name, m.email, m.group_id;
 
 comment on view member_balances is
-  'Balance per member: (paid_expenses + settlements_made) - (owed_expenses + settlements_received). Filter by group_id in app code.';
+  'Full balance per member: (paid + settlements_made + cover_bills_received) - (owed + settlements_received + cover_bills_given).';
