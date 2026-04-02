@@ -132,6 +132,13 @@ export default function DashboardPage() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
 
+  // Default to last month
+  const defaultMonth = (() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 7);
+  })();
+  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+
   useEffect(() => {
     load();
   }, []);
@@ -168,6 +175,28 @@ export default function DashboardPage() {
 
   const todaySpent  = todayExpenses.reduce((s, e) => s + e.amount, 0);
   const monthSpent  = monthExpenses.reduce((s, e) => s + e.amount, 0);
+
+  // Selected month breakdown
+  const [selYear, selMon] = selectedMonth.split("-").map(Number);
+  const selectedMonthLabel = new Date(selYear, selMon - 1, 1).toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const selectedMonthExpenses = expenses.filter((e) => e.date.slice(0, 7) === selectedMonth);
+  const selectedMonthSpent    = selectedMonthExpenses.reduce((s, e) => s + e.amount, 0);
+
+  const selectedMonthByPayer = selectedMonthExpenses.reduce<
+    Record<string, { name: string; total: number; count: number }>
+  >((acc, e) => {
+    const id   = e.payer.id;
+    const name = e.payer.nickname ?? e.payer.name;
+    if (!acc[id]) acc[id] = { name, total: 0, count: 0 };
+    acc[id].total += e.amount;
+    acc[id].count += 1;
+    return acc;
+  }, {});
+  const selectedMonthPayers = Object.values(selectedMonthByPayer).sort((a, b) => b.total - a.total);
 
   // Top payer = member with highest total_paid
   const topPayer = balances.length > 0
@@ -314,6 +343,117 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+
+      {/* ── Monthly breakdown (selectable) ────────────────────────────── */}
+      <section className="mb-8">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+          {/* Card header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h2 className="text-base font-semibold text-gray-800">Monthly Breakdown</h2>
+            <input
+              type="month"
+              value={selectedMonth}
+              max={new Date().toISOString().slice(0, 7)}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Summary banner */}
+          {loading ? (
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+          ) : (
+            <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Total Spent</p>
+                <p className="text-xl font-bold text-blue-900 mt-0.5">{formatCurrency(selectedMonthSpent)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-blue-500">{selectedMonthExpenses.length} expense{selectedMonthExpenses.length !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-blue-400 mt-0.5">{selectedMonthLabel}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Who paid */}
+          <div className="px-5 pt-4 pb-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Who Paid</p>
+            {loading && (
+              <div className="space-y-3 mb-4">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-2 w-full rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-14" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!loading && selectedMonthPayers.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-3 mb-2">No payments in {selectedMonthLabel}.</p>
+            )}
+            {!loading && selectedMonthPayers.map((payer) => {
+              const pct = selectedMonthSpent > 0 ? (payer.total / selectedMonthSpent) * 100 : 0;
+              return (
+                <div key={payer.name} className="mb-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {getInitials(payer.name)}
+                    </div>
+                    <span className="text-sm font-medium text-gray-800 flex-1 truncate">{payer.name}</span>
+                    <span className="text-xs text-gray-400">{payer.count} exp</span>
+                    <span className="text-sm font-semibold text-gray-900 w-20 text-right">{formatCurrency(payer.total)}</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-9">
+                    <div
+                      className="h-full bg-indigo-400 rounded-full transition-all duration-300"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100 mx-5" />
+
+          {/* Expense records */}
+          <div className="px-5 pt-4 pb-1">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Expense Records</p>
+          </div>
+          <div className="px-4">
+            {loading && (
+              <div className="divide-y divide-gray-100">
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="flex items-center gap-3 py-3">
+                    <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3.5 w-36" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!loading && selectedMonthExpenses.length === 0 && (
+              <p className="py-5 text-center text-sm text-gray-400">No expenses recorded in {selectedMonthLabel}.</p>
+            )}
+            {!loading && selectedMonthExpenses.map((expense) => (
+              <RecentExpenseRow key={expense.id} expense={expense} />
+            ))}
+          </div>
+
+        </div>
+      </section>
 
       {/* ── Recent expenses ────────────────────────────────────────────── */}
       <section>
