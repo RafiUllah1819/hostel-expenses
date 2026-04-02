@@ -132,10 +132,10 @@ export default function DashboardPage() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
 
-  // Default to last month
+  // Default to current month
   const defaultMonth = (() => {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 7);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   })();
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
 
@@ -167,8 +167,9 @@ export default function DashboardPage() {
   const totalSpent     = expenses.reduce((s, e) => s + e.amount, 0);
   const unsettled      = balances.filter((b) => b.balance !== 0).length;
 
-  const todayStr  = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-  const monthStr  = todayStr.slice(0, 7);                  // "YYYY-MM"
+  const _now      = new Date();
+  const todayStr  = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+  const monthStr  = todayStr.slice(0, 7);
 
   const todayExpenses  = expenses.filter((e) => e.date.slice(0, 10) === todayStr);
   const monthExpenses  = expenses.filter((e) => e.date.slice(0, 7) === monthStr);
@@ -354,7 +355,7 @@ export default function DashboardPage() {
             <input
               type="month"
               value={selectedMonth}
-              max={new Date().toISOString().slice(0, 7)}
+              max={monthStr}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
