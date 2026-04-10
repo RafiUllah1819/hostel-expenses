@@ -29,7 +29,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold text-blue-600">SplitEase</span>
+            <span className="text-xl font-bold text-blue-600">ExpenseMate</span>
           </Link>
 
           {/* Desktop nav links */}

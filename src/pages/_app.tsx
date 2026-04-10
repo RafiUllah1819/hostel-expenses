@@ -9,7 +9,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {/* Viewport — required for Tailwind responsive classes to work on mobile */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Default page title — individual pages override this with their own <Head> */}
-        <title>SplitEase</title>
+        <title>ExpenseMate</title>
       </Head>
       <Component {...pageProps} />
     </>

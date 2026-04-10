@@ -10,7 +10,7 @@ export default function Document() {
         {/* App description — shown in search engines and link previews */}
         <meta
           name="description"
-          content="SplitEase — shared expense tracker for hostel groups and flatmates."
+          content="ExpenseMate — shared expense tracker for hostel groups and flatmates."
         />
 
         {/* Favicon — replace public/favicon.ico with your own icon */}

@@ -13,7 +13,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         {children}
       </main>
       <footer className="border-t border-gray-200 bg-white py-4 text-center text-xs text-gray-400">
-        SplitEase &mdash; Hostel Expense Manager
+        ExpenseMate &mdash; Hostel Expense Manager
       </footer>
     </div>
   );

@@ -6,7 +6,7 @@
 export const CURRENCY = "PKR" as const;
 
 /** App name shown in the UI */
-export const APP_NAME = "SplitEase" as const;
+export const APP_NAME = "ExpenseMate" as const;
 
 /** Supabase table names — avoids magic strings scattered across services */
 export const TABLES = {
