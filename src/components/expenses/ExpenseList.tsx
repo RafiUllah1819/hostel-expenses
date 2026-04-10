@@ -39,11 +39,11 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
         <table className="min-w-full divide-y divide-gray-100">
 
           {/* Table header */}
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {COLUMNS.map((col) => (
                 <th
@@ -67,7 +67,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
           </tbody>
 
           {/* Footer — grand total */}
-          <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+          <tfoot className="bg-gray-50 border-t-2 border-gray-200 sticky bottom-0 z-10">
             <tr>
               <td
                 colSpan={6}
